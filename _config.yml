@@ -1,0 +1,11 @@
+# Site settings
+title: FolderMaker
+description: >-
+  A collection of PowerShell scripts to automate the setup of new programming projects.
+theme: jekyll-theme-hacker
+
+# Navigation
+header_pages:
+  - index.md
+  - scripts.md
+  - about.md
