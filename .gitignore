@@ -1,0 +1,18 @@
+# AI-specific files
+ai_prompt.md
+
+# Jekyll
+_site/
+.jekyll-cache/
+
+# Dependencies
+node_modules/
+vendor/bundle/
+.venv/
+venv/
+
+# OS and IDE
+.DS_Store
+Thumbs.db
+.vscode/
+*.log
