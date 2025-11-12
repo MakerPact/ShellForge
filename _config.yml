@@ -9,3 +9,8 @@ header_pages:
   - index.md
   - scripts.md
   - about.md
+
+collections:
+  scripts:
+    output: true
+    permalink: /scripts/:name/
