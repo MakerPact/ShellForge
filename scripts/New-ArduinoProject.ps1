@@ -254,7 +254,8 @@ void DPrint::println(const String &value) {
 '@
 
     # .ino file content
-    $InoContent = @"#include <Arduino.h>
+    $InoContent = @"
+#include <Arduino.h>
 #include "DPrint.h"
 
 // --- Debug Print Configuration ---
@@ -302,7 +303,8 @@ void loop() {
 "@
 
     # README.md content
-    $ReadmeContent = @"# $ProjectName
+    $ReadmeContent = @"
+# $ProjectName
 
 This is a new Arduino project scaffolded by ShellForge.
 
