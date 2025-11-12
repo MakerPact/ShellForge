@@ -13,3 +13,8 @@ This page contains a list of all the available scripts. Click on a script to lea
 -   [New-PythonApp](./_docs/new-python-app.md)
 -   [New-ReactApp](./_docs/new-react-app.md)
 -   [New-SimpleWebsite](./_docs/new-simple-website.md)
+-   [New-VueApp](./_docs/new-vue-app.md)
+-   [New-SvelteApp](./_docs/new-svelte-app.md)
+-   [New-CppProject](./_docs/new-cpp-project.md)
+-   [New-GoProject](./_docs/new-go-project.md)
+-   [New-RustProject](./_docs/new-rust-project.md)
