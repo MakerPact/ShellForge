@@ -159,7 +159,10 @@ process {
         if (-not (Test-Path -Path '.git')) {
             if ($PSCmdlet.ShouldProcess('current directory', 'Initialize Git repository')) {
                 Write-Host "Initializing Git repository..."
-                git init | Out-Null
+                git init
+                if ($LASTEXITCODE -ne 0) {
+                    throw "git init failed with exit code $LASTEXITCODE"
+                }
             }
         }
         else {
@@ -170,7 +173,10 @@ process {
         if (-not (Test-Path -Path 'package.json')) {
             if ($PSCmdlet.ShouldProcess('current directory', 'Run npm init -y')) {
                 Write-Host "Running 'npm init -y'..."
-                npm init -y | Out-Null
+                npm init -y
+                if ($LASTEXITCODE -ne 0) {
+                    throw "npm init failed with exit code $LASTEXITCODE"
+                }
             }
         }
         else {
@@ -180,24 +186,17 @@ process {
         # Install dependencies
         if ($PSCmdlet.ShouldProcess('express, dotenv', 'Install npm packages')) {
             Write-Host "Installing npm packages: express, dotenv..."
-            npm install express dotenv | Out-Null
+            npm install express dotenv
+            if ($LASTEXITCODE -ne 0) {
+                throw "npm install failed with exit code $LASTEXITCODE"
+            }
         }
 
         # Create src directory
         if (-not (Test-Path -Path 'src')) {
             if ($PSCmdlet.ShouldProcess('src', 'Create directory')) {
                 Write-Host "Creating directory: src"
-                New-Item -ItemType Directory -Path 'src' | Out-Null
-                # Wait for the directory to exist
-                $maxRetries = 50
-                $retryCount = 0
-                while (-not (Test-Path -Path 'src') -and $retryCount -lt $maxRetries) {
-                    Start-Sleep -Milliseconds 100
-                    $retryCount++
-                }
-                if (-not (Test-Path -Path 'src')) {
-                    throw "Failed to create 'src' directory after multiple retries."
-                }
+                New-Item -ItemType Directory -Path 'src'
             }
         }
 

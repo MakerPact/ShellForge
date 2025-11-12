@@ -33,9 +33,10 @@ process {
         if ($PSCmdlet.ShouldProcess('current directory', 'Run create-vite')) {
             Write-Host "Running 'npx -y create-vite . --template react'..."
             Write-Host "This step may take a few moments..."
-            # The '-y' flag automatically says yes to the npx prompt.
-            # Piping 'n' to handle potential experimental feature prompts.
             echo "n" | npx -y create-vite . --template react
+            if ($LASTEXITCODE -ne 0) {
+                throw "create-vite failed with exit code $LASTEXITCODE"
+            }
         }
 
         # Install dependencies
@@ -44,15 +45,8 @@ process {
                 Write-Host "Running 'npm install'..."
                 Write-Host "This is the longest step and can take several minutes depending on your network connection."
                 npm install
-                # Wait for the node_modules directory to exist
-                $maxRetries = 50
-                $retryCount = 0
-                while (-not (Test-Path -Path 'node_modules') -and $retryCount -lt $maxRetries) {
-                    Start-Sleep -Milliseconds 100
-                    $retryCount++
-                }
-                if (-not (Test-Path -Path 'node_modules')) {
-                    throw "Failed to create 'node_modules' directory after multiple retries."
+                if ($LASTEXITCODE -ne 0) {
+                    throw "npm install failed with exit code $LASTEXITCODE"
                 }
             }
         } else {
@@ -64,6 +58,9 @@ process {
             if ($PSCmdlet.ShouldProcess('current directory', 'Initialize Git repository')) {
                 Write-Host "Initializing Git repository..."
                 git init
+                if ($LASTEXITCODE -ne 0) {
+                    throw "git init failed with exit code $LASTEXITCODE"
+                }
                 git add .
                 git commit -m "Initial commit: Scaffolded React app with Vite"
             }

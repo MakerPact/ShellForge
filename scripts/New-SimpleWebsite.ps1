@@ -80,7 +80,10 @@ process {
         if (-not (Test-Path -Path '.git')) {
             if ($PSCmdlet.ShouldProcess('current directory', 'Initialize Git repository')) {
                 Write-Host "Initializing Git repository..."
-                git init | Out-Null
+                git init
+                if ($LASTEXITCODE -ne 0) {
+                    throw "git init failed with exit code $LASTEXITCODE"
+                }
             }
         }
         else {
@@ -92,17 +95,7 @@ process {
             if (-not (Test-Path -Path $folder)) {
                 if ($PSCmdlet.ShouldProcess($folder, 'Create directory')) {
                     Write-Host "Creating directory: $folder"
-                    New-Item -ItemType Directory -Path $folder | Out-Null
-                    # Wait for the directory to exist
-                    $maxRetries = 50
-                    $retryCount = 0
-                    while (-not (Test-Path -Path $folder) -and $retryCount -lt $maxRetries) {
-                        Start-Sleep -Milliseconds 100
-                        $retryCount++
-                    }
-                    if (-not (Test-Path -Path $folder)) {
-                        throw "Failed to create directory '$folder' after multiple retries."
-                    }
+                    New-Item -ItemType Directory -Path $folder
                 }
             }
         }

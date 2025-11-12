@@ -2,6 +2,11 @@ param (
     [string]$ProjectName
 )
 
+begin {
+    $OriginalErrorActionPreference = $ErrorActionPreference
+    $ErrorActionPreference = 'Stop'
+}
+
 # If ProjectName is not provided, use the current folder's name
 if ([string]::IsNullOrEmpty($ProjectName)) {
     $ProjectName = (Get-Item -Path ".").Name
@@ -10,35 +15,19 @@ if ([string]::IsNullOrEmpty($ProjectName)) {
 # Create the project directory
 New-Item -ItemType Directory -Name $ProjectName
 
-# Wait for the directory to exist
-$maxRetries = 50
-$retryCount = 0
-while (-not (Test-Path -Path $ProjectName) -and $retryCount -lt $maxRetries) {
-    Start-Sleep -Milliseconds 100
-    $retryCount++
-}
-if (-not (Test-Path -Path $ProjectName)) {
-    throw "Failed to create project directory '$ProjectName' after multiple retries."
-}
-
 # Change into the new directory
 cd $ProjectName
 
 # Initialize a new Git repository
 git init
+if ($LASTEXITCODE -ne 0) {
+    throw "git init failed with exit code $LASTEXITCODE"
+}
 
 # Create a Python virtual environment
 python -m venv .venv
-
-# Wait for the directory to exist
-$maxRetries = 50
-$retryCount = 0
-while (-not (Test-Path -Path '.venv') -and $retryCount -lt $maxRetries) {
-    Start-Sleep -Milliseconds 100
-    $retryCount++
-}
-if (-not (Test-Path -Path '.venv')) {
-    throw "Failed to create '.venv' directory after multiple retries."
+if ($LASTEXITCODE -ne 0) {
+    throw "python -m venv failed with exit code $LASTEXITCODE"
 }
 
 # Activate virtual environment and install Django
@@ -47,10 +36,16 @@ if (-not (Test-Path -Path '.venv')) {
 # A more robust solution would involve calling the venv's python directly.
 Write-Host "Installing Django..."
 .\.venv\Scripts\pip install django
+if ($LASTEXITCODE -ne 0) {
+    throw "pip install failed with exit code $LASTEXITCODE"
+}
 
 # Create Django project
 Write-Host "Creating Django project..."
 .\.venv\Scripts\django-admin startproject $ProjectName .
+if ($LASTEXITCODE -ne 0) {
+    throw "django-admin startproject failed with exit code $LASTEXITCODE"
+}
 
 # Create a .gitignore file
 @'

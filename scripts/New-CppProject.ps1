@@ -2,6 +2,11 @@ param (
     [string]$ProjectName
 )
 
+begin {
+    $OriginalErrorActionPreference = $ErrorActionPreference
+    $ErrorActionPreference = 'Stop'
+}
+
 # If ProjectName is not provided, use the current folder's name
 if ([string]::IsNullOrEmpty($ProjectName)) {
     $ProjectName = (Get-Item -Path ".").Name
@@ -9,32 +14,12 @@ if ([string]::IsNullOrEmpty($ProjectName)) {
 
 # Create the project directory
 New-Item -ItemType Directory -Name $ProjectName
-# Wait for the directory to exist
-$maxRetries = 50
-$retryCount = 0
-while (-not (Test-Path -Path $ProjectName) -and $retryCount -lt $maxRetries) {
-    Start-Sleep -Milliseconds 100
-    $retryCount++
-}
-if (-not (Test-Path -Path $ProjectName)) {
-    throw "Failed to create project directory '$ProjectName' after multiple retries."
-}
 
 # Change into the new directory
 cd $ProjectName
 
 # Create a src directory
 New-Item -ItemType Directory -Name "src"
-# Wait for the directory to exist
-$maxRetries = 50
-$retryCount = 0
-while (-not (Test-Path -Path 'src') -and $retryCount -lt $maxRetries) {
-    Start-Sleep -Milliseconds 100
-    $retryCount++
-}
-if (-not (Test-Path -Path 'src')) {
-    throw "Failed to create 'src' directory after multiple retries."
-}
 
 # Create a main.cpp file
 @'
@@ -69,6 +54,9 @@ clean:
 
 # Initialize a new Git repository
 git init
+if ($LASTEXITCODE -ne 0) {
+    throw "git init failed with exit code $LASTEXITCODE"
+}
 
 # Create a .gitignore file
 @'

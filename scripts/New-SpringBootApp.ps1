@@ -2,6 +2,11 @@ param (
     [string]$ProjectName
 )
 
+begin {
+    $OriginalErrorActionPreference = $ErrorActionPreference
+    $ErrorActionPreference = 'Stop'
+}
+
 # If ProjectName is not provided, use the current folder's name
 if ([string]::IsNullOrEmpty($ProjectName)) {
     $ProjectName = (Get-Item -Path ".").Name
@@ -21,22 +26,14 @@ Expand-Archive -Path $ZipFileName -DestinationPath . -Force
 # Remove the zip file
 Remove-Item $ZipFileName
 
-# Wait for the directory to exist
-$maxRetries = 50
-$retryCount = 0
-while (-not (Test-Path -Path $ProjectName) -and $retryCount -lt $maxRetries) {
-    Start-Sleep -Milliseconds 100
-    $retryCount++
-}
-if (-not (Test-Path -Path $ProjectName)) {
-    throw "Failed to create project directory '$ProjectName' after multiple retries."
-}
-
 # Change into the new directory
 cd $ProjectName
 
 # Initialize a new Git repository
 git init
+if ($LASTEXITCODE -ne 0) {
+    throw "git init failed with exit code $LASTEXITCODE"
+}
 
 # The .gitignore file is created by Spring Initializr
 
