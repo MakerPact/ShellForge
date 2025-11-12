@@ -77,6 +77,16 @@ We will start by creating scaffolding scripts for the five most common project t
         *   Create a `tests` folder with a `<ProjectName>.Tests.ps1` file using Pester.
         *   Create a `.gitignore` file.
 
+6.  **Arduino Project:**
+    *   **Command:** `New-ArduinoProject.ps1`
+    *   **Actions:**
+        *   [X] Initialize a Git repository.
+        *   [X] Create a main `.ino` file with a pre-populated `setup()` and documentation for a custom debug print feature.
+        *   [X] Create a custom `DPrint` library (header and C++ files) that allows conditional serial printing.
+        *   [X] Create dedicated folders for documentation, project datasheets, and images.
+        *   [X] Create a `.gitignore` file with common Arduino and IDE ignores.
+        *   [X] Create a basic `README.md` for GitHub deployment.
+
 ### Stage 2: Expansion
 -   [ ] Identify the next 5 most common project types.
 -   [ ] Repeat the process from Stage 1 for the new project types.
