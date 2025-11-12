@@ -254,7 +254,8 @@ void DPrint::println(const String &value) {
 '@
 
     # .ino file content
-    $InoContent = @"#include <Arduino.h>
+    $InoContent = @"
+#include <Arduino.h>
 #include "DPrint.h"
 
 // --- Debug Print Configuration ---
@@ -302,7 +303,8 @@ void loop() {
 "@
 
     # README.md content
-    $ReadmeContent = @"# $ProjectName
+    $ReadmeContent = @"
+# $ProjectName
 
 This is a new Arduino project scaffolded by ShellForge.
 
@@ -367,6 +369,24 @@ process {
     Push-Location $ProjectRoot
 
     try {
+        # Create Sub-directories first to ensure they exist before files are written
+        $FoldersToCreate = @(
+            $SrcDir,
+            $DPrintLibDir,
+            $DocumentationDir,
+            $ProjectDatasheetsDir,
+            $ImagesDir
+        )
+        foreach ($folder in $FoldersToCreate) {
+            if (-not (Test-Path -Path $folder)) {
+                if ($PSCmdlet.ShouldProcess($folder, 'Create directory')) {
+                    Write-Host "Creating directory: $folder"
+                    New-Item -ItemType Directory -Path $folder | Out-Null
+                    Start-Sleep -Milliseconds 100 # Add a small delay after creating each directory
+                }
+            }
+        }
+
         # Git Initialization
         if (-not (Test-Path -Path '.git')) {
             if ($PSCmdlet.ShouldProcess('current directory', 'Initialize Git repository')) {
@@ -376,25 +396,6 @@ process {
         }
         else {
             Write-Warning "Git repository already exists in '$ProjectRoot'."
-        }
-
-        # Create Sub-directories
-        $FoldersToCreate = @(
-            $SrcDir,
-            $DPrintLibDir, # This will create lib/DPrint
-            $DocumentationDir,
-            $ProjectDatasheetsDir,
-            $ImagesDir
-        )
-        foreach ($folder in $FoldersToCreate) {
-            # Ensure path is relative to current location for ShouldProcess clarity
-            $relativePath = (Resolve-Path $folder -Relative).Path
-            if (-not (Test-Path -Path $folder)) {
-                if ($PSCmdlet.ShouldProcess($relativePath, 'Create directory')) {
-                    Write-Host "Creating directory: $relativePath"
-                    New-Item -ItemType Directory -Path $folder | Out-Null
-                }
-            }
         }
 
         # Create .gitignore

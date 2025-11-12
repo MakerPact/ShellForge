@@ -122,6 +122,16 @@ process {
             if ($PSCmdlet.ShouldProcess('.venv', 'Create Python virtual environment')) {
                 Write-Host "Creating Python virtual environment in '.venv'..."
                 python -m venv .venv
+                # Wait for the directory to exist
+                $maxRetries = 50
+                $retryCount = 0
+                while (-not (Test-Path -Path '.venv') -and $retryCount -lt $maxRetries) {
+                    Start-Sleep -Milliseconds 100
+                    $retryCount++
+                }
+                if (-not (Test-Path -Path '.venv')) {
+                    throw "Failed to create '.venv' directory after multiple retries."
+                }
             }
         }
         else {

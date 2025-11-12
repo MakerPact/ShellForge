@@ -188,6 +188,16 @@ process {
             if ($PSCmdlet.ShouldProcess('src', 'Create directory')) {
                 Write-Host "Creating directory: src"
                 New-Item -ItemType Directory -Path 'src' | Out-Null
+                # Wait for the directory to exist
+                $maxRetries = 50
+                $retryCount = 0
+                while (-not (Test-Path -Path 'src') -and $retryCount -lt $maxRetries) {
+                    Start-Sleep -Milliseconds 100
+                    $retryCount++
+                }
+                if (-not (Test-Path -Path 'src')) {
+                    throw "Failed to create 'src' directory after multiple retries."
+                }
             }
         }
 
