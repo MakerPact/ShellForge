@@ -10,6 +10,17 @@ if ([string]::IsNullOrEmpty($ProjectName)) {
 # Create a new Ember project using the Ember CLI
 npx ember-cli new $ProjectName --skip-git
 
+# Wait for the directory to exist
+$maxRetries = 50
+$retryCount = 0
+while (-not (Test-Path -Path $ProjectName) -and $retryCount -lt $maxRetries) {
+    Start-Sleep -Milliseconds 100
+    $retryCount++
+}
+if (-not (Test-Path -Path $ProjectName)) {
+    throw "Failed to create project directory '$ProjectName' after multiple retries."
+}
+
 # Change into the new directory
 cd $ProjectName
 
