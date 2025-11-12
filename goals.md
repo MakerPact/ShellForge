@@ -87,9 +87,131 @@ We will start by creating scaffolding scripts for the five most common project t
         *   [X] Create a `.gitignore` file with common Arduino and IDE ignores.
         *   [X] Create a basic `README.md` for GitHub deployment.
 
-### Stage 2: Expansion
--   [ ] Identify the next 5 most common project types.
--   [ ] Repeat the process from Stage 1 for the new project types.
+### Stage 2: Expansion - Next 30 Common Project Templates
+
+We will expand the toolkit to include scaffolding scripts for the next 30 most common project types.
+
+1.  **Angular App:**
+    *   **Command:** `New-AngularApp.ps1`
+    *   **Actions:** Wrapper around `npx @angular/cli new`.
+
+2.  **Ember App:**
+    *   **Command:** `New-EmberApp.ps1`
+    *   **Actions:** Wrapper around `npx ember-cli new`.
+
+3.  **Next.js App:**
+    *   **Command:** `New-NextJsApp.ps1`
+    *   **Actions:** Wrapper around `npx create-next-app`.
+
+4.  **Nuxt.js App:**
+    *   **Command:** `New-NuxtJsApp.ps1`
+    *   **Actions:** Wrapper around `npx create-nuxt-app`.
+
+5.  **Gatsby App:**
+    *   **Command:** `New-GatsbyApp.ps1`
+    *   **Actions:** Wrapper around `npx gatsby new`.
+
+6.  **Svelte App:**
+    *   **Command:** `New-SvelteApp.ps1`
+    *   **Actions:** Wrapper around `npx create-vite --template svelte`.
+
+7.  **Vue.js App:**
+    *   **Command:** `New-VueApp.ps1`
+    *   **Actions:** Wrapper around `npx create-vite --template vue`.
+
+8.  **ASP.NET Core Web App:**
+    *   **Command:** `New-AspNetCoreWebApp.ps1`
+    *   **Actions:** Wrapper around `dotnet new webapp`.
+
+9.  **ASP.NET Core API:**
+    *   **Command:** `New-AspNetCoreApi.ps1`
+    *   **Actions:** Wrapper around `dotnet new webapi`.
+
+10. **Django App:**
+    *   **Command:** `New-DjangoApp.ps1`
+    *   **Actions:** Initialize Git, create virtual environment, `django-admin startproject`, `manage.py`, `.gitignore`.
+
+11. **Flask App:**
+    *   **Command:** `New-FlaskApp.ps1`
+    *   **Actions:** Initialize Git, create virtual environment, `app.py`, `requirements.txt`, `.gitignore`.
+
+12. **Ruby on Rails App:**
+    *   **Command:** `New-RailsApp.ps1`
+    *   **Actions:** Wrapper around `rails new`.
+
+13. **Laravel App:**
+    *   **Command:** `New-LaravelApp.ps1`
+    *   **Actions:** Wrapper around `composer create-project laravel/laravel`.
+
+14. **Docusaurus Site:**
+    *   **Command:** `New-DocusaurusSite.ps1`
+    *   **Actions:** Wrapper around `npx create-docusaurus`.
+
+15. **Eleventy Site:**
+    *   **Command:** `New-EleventySite.ps1`
+    *   **Actions:** Initialize npm, install Eleventy, basic config, `src/index.md`, `src/_includes/layout.njk`, Git init, `.gitignore`.
+
+16. **Hugo Site:**
+    *   **Command:** `New-HugoSite.ps1`
+    *   **Actions:** Wrapper around `hugo new site`.
+
+17. **Jekyll Site:**
+    *   **Command:** `New-JekyllSite.ps1`
+    *   **Actions:** Wrapper around `jekyll new`.
+
+18. **MkDocs Site:**
+    *   **Command:** `New-MkDocsSite.ps1`
+    *   **Actions:** Initialize Git, create virtual environment, install MkDocs, `mkdocs new`, `mkdocs.yml`, `.gitignore`.
+
+19. **Flutter App:**
+    *   **Command:** `New-FlutterApp.ps1`
+    *   **Actions:** Wrapper around `flutter create`.
+
+20. **Xamarin App:**
+    *   **Command:** `New-XamarinApp.ps1`
+    *   **Actions:** Wrapper around `dotnet new xamarin`.
+
+21. **Electron App:**
+    *   **Command:** `New-ElectronApp.ps1`
+    *   **Actions:** Initialize npm, install Electron, `main.js`, `index.html`, `package.json` scripts, Git init, `.gitignore`.
+
+22. **React Native App:**
+    *   **Command:** `New-ReactNativeApp.ps1`
+    *   **Actions:** Wrapper around `npx react-native init`.
+
+23. **Go CLI App:**
+    *   **Command:** `New-GoCliApp.ps1`
+    *   **Actions:** Initialize Git, `main.go`, `go.mod`, `.gitignore`.
+
+24. **Rust CLI App:**
+    *   **Command:** `New-RustCliApp.ps1`
+    *   **Actions:** Wrapper around `cargo new --bin`.
+
+25. **Java Spring Boot App:**
+    *   **Command:** `New-SpringBootApp.ps1`
+    *   **Actions:** Wrapper around `curl start.spring.io`.
+
+26. **C# Console App:**
+    *   **Command:** `New-CsharpConsoleApp.ps1`
+    *   **Actions:** Wrapper around `dotnet new console`.
+
+27. **PHP CLI App:**
+    *   **Command:** `New-PhpCliApp.ps1`
+    *   **Actions:** Initialize Git, `composer.json`, `src/cli.php`, `.gitignore`.
+
+28. **Kubernetes Manifests:**
+    *   **Command:** `New-KubernetesManifests.ps1`
+    *   **Actions:** Create `deployments/`, `services/`, `ingresses/` directories with example YAML files, Git init, `.gitignore`.
+
+29. **Terraform Project:**
+    *   **Command:** `New-TerraformProject.ps1`
+    *   **Actions:** Create `main.tf`, `variables.tf`, `outputs.tf` with basic structure, Git init, `.gitignore`.
+
+30. **Docker Compose Project:**
+    *   **Command:** `New-DockerComposeProject.ps1`
+    *   **Actions:** Create `docker-compose.yml` with example services, Git init, `.gitignore`.
+
+### Stage 3: Refinement & Core Engine
 
 ### Stage 3: Refinement & Core Engine
 -   [ ] Develop a central PowerShell module (`FolderMaker.psm1`).
