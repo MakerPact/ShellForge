@@ -1,19 +1,25 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-    Scaffolds a new Arduino project with a custom debug print library.
+    Scaffolds a new Arduino project with a custom debug library and QOL helpers.
 .DESCRIPTION
     This script initializes a new project directory for an Arduino sketch.
     It performs the following actions:
     - Initializes a Git repository.
-    - Creates a main .ino file with a pre-populated setup() and documentation for a custom debug print feature.
-    - Creates a custom DPrint library (header and C++ files) that allows conditional serial printing.
-    - Creates dedicated folders for documentation, project datasheets, and images.
-    - Creates a .gitignore file with common Arduino and IDE ignores.
-    - Creates a basic README.md for GitHub deployment.
+    - Creates a main .ino file, pre-configured to use the new helpers.
+    - Creates a 'src/config.h' file for global settings (pins, baud, debug flags).
+    - Creates a 'platformio.ini' file for easy integration with PlatformIO/VS Code.
+    - Creates a powerful 'DPrint' library (header and C++) with template-based
+      printing and printf support.
+    - Creates a 'SimpleTimer' library for non-blocking delays.
+    - Creates a 'StatusLED' library for managing visual status indicators.
+    - Creates a 'SettingsManager' (header-only) library for easy EEPROM saves/loads.
+    - Creates dedicated folders for documentation, datasheets, and images.
+    - Creates an improved .gitignore file.
+    - Creates an updated README.md explaining the new features.
 .NOTES
     Author: Gemini
-    Date: 2025-11-11
+    Date: 2025-11-13
 #>
 
 [CmdletBinding(SupportsShouldProcess = $true)]
@@ -21,7 +27,7 @@ param(
     [Parameter(Mandatory=$true, HelpMessage="The name of the Arduino project.")]
     [string]$ProjectName,
 
-    [Parameter(HelpMessage="Enable or disable the custom debug print feature. Defaults to true.")]
+    [Parameter(HelpMessage="Enable or disable the custom debug print feature by default.")]
     [bool]$EnableDebugPrint = $true
 )
 
@@ -50,14 +56,16 @@ begin {
     $ProjectRoot = Join-Path (Get-Location).ProviderPath $ProjectName
     $SrcDir = Join-Path $ProjectRoot 'src'
     $LibDir = Join-Path $ProjectRoot 'lib'
-    $DPrintLibDir = Join-Path $LibDir 'DPrint'
+    $ScriptLibDir = Join-Path $PSScriptRoot 'lib'
+
+    # Documentation paths
     $DocumentationDir = Join-Path $ProjectRoot 'documentation'
     $ProjectDatasheetsDir = Join-Path $ProjectRoot 'project_datasheets'
     $ImagesDir = Join-Path $ProjectRoot 'images'
 
     # --- Content for files ---
 
-    # .gitignore content
+    # .gitignore content (Removed /lib/ ignore, as we are versioning our custom libs)
     $GitignoreContent = @'
 # Arduino IDE and build artifacts
 *.hex
@@ -98,11 +106,6 @@ begin {
 *.vcxproj
 *.vcxproj.user
 *.code-workspace
-*.vscode/
-
-# Libraries
-/libraries/*
-!/libraries/DPrint/ # Keep our custom library
 
 # OS generated files
 .DS_Store
@@ -115,260 +118,239 @@ Thumbs.db
 .idea/
 '@
 
-    # DPrint.h content
-    $DPrintHContent = @'
-#ifndef DPrint_h
-#define DPrint_h
+    # src/config.h content
+    $ConfigHContent = @"
+#ifndef config_h
+#define config_h
 
 #include <Arduino.h>
 
-class DPrint {
-public:
-    DPrint(bool enabled);
-    void print(const char* message);
-    void println(const char* message);
-    void print(int value);
-    void println(int value);
-    void print(long value);
-    void println(long value);
-    void print(float value);
-    void println(float value);
-    void print(double value);
-    void println(double value);
-    void print(char value);
-    void println(char value);
-    void print(unsigned int value);
-    void println(unsigned int value);
-    void print(unsigned long value);
-    void println(unsigned long value);
-    void print(const String &value);
-    void println(const String &value);
+// --- Debug & Serial ---
+// Set to true to enable debug messages, false to disable.
+const bool DEBUG_PRINT_ENABLED = $($EnableDebugPrint.ToString().ToLower());
+const long BAUD_RATE = 115200;
 
-private:
-    bool _enabled;
-};
+// --- Pin Definitions ---
+// Assign descriptive names to your pins
+const int STATUS_LED_PIN = LED_BUILTIN;
+// const int SENSOR_PIN = A0;
+// const int BUTTON_PIN = 2;
 
-// Global instance for easy access, initialized in the .ino file
-extern DPrint dprint;
+// --- Tuning Parameters ---
+// Intervals for timers (in milliseconds)
+const unsigned long SENSOR_READ_INTERVAL = 1000;
+const unsigned long HEARTBEAT_INTERVAL = 5000;
+
 
 #endif
-'@
+"@
 
-    # DPrint.cpp content
-    $DPrintCppContent = @'
-#include "DPrint.h"
+    # platformio.ini content
+    $PlatformioIniContent = @"
+; PlatformIO Project Configuration File
+;
+;   BuildOptions: http://docs.platformio.org/page/projectconf/build_options.html
+;   LibraryOptions: http://docs.platformio.org/page/projectconf/library_options.html
+;   UploadOptions: http://docs.platformio.org/page/projectconf/upload_options.html
+;
+; Please visit documentation for the other options and examples
+; http://docs.platformio.org/page/projectconf.html
 
-DPrint::DPrint(bool enabled) : _enabled(enabled) {}
+[env:uno]
+platform = atmelavr
+board = uno
+framework = arduino
+monitor_speed = 115200
+lib_deps =
+    ; Add external library dependencies here
+    ; ex: bblanchon/ArduinoJson@^6.0.0
 
-void DPrint::print(const char* message) {
-    if (_enabled) {
-        Serial.print(message);
-    }
-}
+; Ignore our self-managed libs in the 'lib' folder
+; from the Library Dependency Finder (LDF)
+lib_ignore =
+    DPrint,
+    SimpleTimer,
+    StatusLED,
+    SettingsManager
 
-void DPrint::println(const char* message) {
-    if (_enabled) {
-        Serial.println(message);
-    }
-}
+[env:nodemcuv2]
+platform = espressif8266
+board = nodemcuv2
+framework = arduino
+monitor_speed = 115200
+lib_deps =
 
-void DPrint::print(int value) {
-    if (_enabled) {
-        Serial.print(value);
-    }
-}
+lib_ignore =
+    DPrint,
+    SimpleTimer,
+    StatusLED,
+    SettingsManager
+"@
 
-void DPrint::println(int value) {
-    if (_enabled) {
-        Serial.println(value);
-    }
-}
-
-void DPrint::print(long value) {
-    if (_enabled) {
-        Serial.print(value);
-    }
-}
-
-void DPrint::println(long value) {
-    if (_enabled) {
-        Serial.println(value);
-    }
-}
-
-void DPrint::print(float value) {
-    if (_enabled) {
-        Serial.print(value);
-    }
-}
-
-void DPrint::println(float value) {
-    if (_enabled) {
-        Serial.println(value);
-    }
-}
-
-void DPrint::print(double value) {
-    if (_enabled) {
-        Serial.print(value);
-    }
-}
-
-void DPrint::println(double value) {
-    if (_enabled) {
-        Serial.println(value);
-    }
-}
-
-void DPrint::print(char value) {
-    if (_enabled) {
-        Serial.print(value);
-    }
-}
-
-void DPrint::println(char value) {
-    if (_enabled) {
-        Serial.println(value);
-    }
-}
-
-void DPrint::print(unsigned int value) {
-    if (_enabled) {
-        Serial.print(value);
-    }
-}
-
-void DPrint::println(unsigned int value) {
-    if (_enabled) {
-        Serial.println(value);
-    }
-}
-
-void DPrint::print(unsigned long value) {
-    if (_enabled) {
-        Serial.print(value);
-    }
-}
-
-void DPrint::println(unsigned long value) {
-    if (_enabled) {
-        Serial.println(value);
-    }
-}
-
-void DPrint::print(const String &value) {
-    if (_enabled) {
-        Serial.print(value);
-    }
-}
-
-void DPrint::println(const String &value) {
-    if (_enabled) {
-        Serial.println(value);
-    }
-}
-'@
-
-    # .ino file content
+    # .ino file content (Upgraded to use new helpers)
     $InoContent = @"
-#include <Arduino.h>
-#include "DPrint.h"
+#include "config.h"       // Global settings (pins, debug flag, etc.)
+#include "DPrint.h"       // Custom debug print library
+#include "SimpleTimer.h"  // Non-blocking timer
+#include "StatusLED.h"    // Status LED manager
 
-// --- Debug Print Configuration ---
-// Set to true to enable debug messages via dprint(), false to disable them.
-const bool DEBUG_PRINT_ENABLED = $($EnableDebugPrint.ToString().ToLower());
-DPrint dprint(DEBUG_PRINT_ENABLED); // Initialize the global DPrint instance
-
-/*
- * DPrint Library Usage:
- *
- * The DPrint library provides a simple way to conditionally print debug messages
- * to the Serial monitor. When DEBUG_PRINT_ENABLED is true, calls to dprint.print()
- * and dprint.println() will output to Serial. When DEBUG_PRINT_ENABLED is false,
- * these calls will be ignored, effectively removing debug output without
- * needing to comment out lines of code.
- *
- * Example:
- *   void setup() {
- *     Serial.begin(115200);
- *     dprint.println("Setup started.");
- *   }
- *
- *   void loop() {
- *     static int counter = 0;
- *     dprint.print("Counter: ");
- *     dprint.println(counter++);
- *     delay(1000);
- *   }
- *
- * To disable debug printing, simply change 'const bool DEBUG_PRINT_ENABLED = true;'
- * to 'const bool DEBUG_PRINT_ENABLED = false;' at the top of this sketch.
- */
+// --- Global Objects ---
+StatusLED statusLed(STATUS_LED_PIN);
+SimpleTimer sensorTimer(SENSOR_READ_INTERVAL);
 
 void setup() {
-    Serial.begin(115200); // Initialize serial communication at 115200 baud
-    dprint.println("Arduino project setup complete.");
-    dprint.println("Welcome to your new project: $ProjectName");
+    // Initialize Debug Printing
+    // This also calls Serial.begin(BAUD_RATE) if DEBUG_PRINT_ENABLED is true
+    dprint.begin(BAUD_RATE, DEBUG_PRINT_ENABLED);
+    dprint.println(F("--- Project $ProjectName Initialized ---"));
+    dprint.printf("Chip ID: %lu\n", (unsigned long)ESP.getChipId()); // Example of printf
+
+    // Set initial status LED mode
+    statusLed.setMode(StatusLEDMode::HEARTBEAT);
+
+    // Start timers
+    sensorTimer.start();
+
+    dprint.println(F("Setup complete."));
 }
 
 void loop() {
-    // Your main code goes here, to run repeatedly:
-    dprint.println("Looping...");
-    delay(1000);
+    // --- Must-call update functions ---
+    // Call this in every loop to update the LED state
+    statusLed.update();
+
+
+    // --- Non-Blocking Tasks ---
+
+    // Check if the sensor timer is finished
+    if (sensorTimer.isFinished()) {
+        dprint.println(F("Reading sensors..."));
+
+        // Read your sensor here
+        int sensorValue = analogRead(A0);
+        dprint.printf("Sensor Value: %d\n", sensorValue);
+
+        // Example: Change LED if value is high
+        if (sensorValue > 800) {
+            statusLed.setMode(StatusLEDMode::BLINK_FAST);
+        } else {
+            statusLed.setMode(StatusLEDMode::HEARTBEAT);
+        }
+
+        // Reset the timer for the next interval
+        sensorTimer.reset();
+    }
+
+    // Your other non-blocking code here...
 }
 "@
 
-    # README.md content
+    # README.md content (Upgraded)
     $ReadmeContent = @"
 # $ProjectName
 
-This is a new Arduino project scaffolded by ShellForge.
+This is a new Arduino project scaffolded with an enhanced QOL helper set.
 
 ## Project Structure
 
-- `src/`: Contains the main Arduino sketch (`.ino` file).
-- `lib/DPrint/`: Custom debug print library.
+- `src/`:
+    - `$ProjectName.ino`: Main project sketch.
+    - `config.h`: **Global project configuration**. Set pins, baud rates, and debug flags here.
+- `lib/`:
+    - `DPrint/`: Custom debug print library (with `printf` and template support).
+    - `SimpleTimer/`: Helper class for non-blocking delays (replaces `delay()`).
+    - `StatusLED/`: Helper class for managing a status/feedback LED.
+    - `SettingsManager/`: Header-only template for saving/loading structs to EEPROM.
 - `documentation/`: For project-specific documentation.
-- `project_datasheets/`: For component datasheets and technical specifications.
-- `images/`: For images used in documentation or README.
+- `project_datasheets/`: For component datasheets.
+- `images/`: For images used in documentation.
+- `platformio.ini`: Configuration for PlatformIO (VS Code).
+- `.gitignore`: Ignores common build files.
 
-## Getting Started
+## Getting Started (PlatformIO - Recommended)
 
-1.  Open the `$ProjectName.ino` file in the Arduino IDE or your preferred editor.
-2.  Ensure the `DPrint` library is recognized (it's located in `lib/DPrint`).
-3.  Upload the sketch to your Arduino board.
-4.  Open the Serial Monitor (Baud Rate: 115200) to see debug output.
+1.  Open this folder in Visual Studio Code with the **PlatformIO** extension installed.
+2.  Open `platformio.ini` and **uncomment** the `[env:...]` section for your board (e.g., `[env:uno]`).
+3.  Click the PlatformIO "Upload" button (right-arrow icon).
 
-## Debug Printing with DPrint Library
+## Getting Started (Arduino IDE)
 
-This project includes a custom `DPrint` library to easily enable or disable debug messages.
+1.  Open the `$ProjectName.ino` file in the Arduino IDE.
+2.  The IDE *should* automatically detect the libraries in the `lib/` folder.
+3.  Upload the sketch to your board.
 
-To control debug output, modify the `DEBUG_PRINT_ENABLED` constant at the top of your `$ProjectName.ino` file:
+## Included QOL Libraries
 
-````cpp
-const bool DEBUG_PRINT_ENABLED = true; // Set to false to disable debug output
-````
+### `config.h`
+This is the central place to configure your project. **Modify this file first.**
+- `DEBUG_PRINT_ENABLED`: Set to `true` or `false` to turn all `dprint` messages on or off.
+- `BAUD_RATE`: Sets the serial monitor speed.
+- `STATUS_LED_PIN`: Define which pin your status LED is on.
 
-Use `dprint.print()` and `dprint.println()` just like `Serial.print()` and `Serial.println()`:
+### `DPrint`
+A powerful debug library. Use it instead of `Serial`.
+- `dprint.begin(BAUD_RATE, DEBUG_PRINT_ENABLED)`: Call this in `setup()`.
+- `dprint.print(message)`: Works with any data type.
+- `dprint.println(message)`: Works with any data type.
+- `dprint.printf("Value: %d\n", myVar)`: For C-style formatted strings.
 
-````cpp
-dprint.println("This message will only appear if DEBUG_PRINT_ENABLED is true.");
-dprint.print("Value: ");
-dprint.println(someVariable);
-````
+### `SimpleTimer`
+For non-blocking tasks.
+```cpp
+#include "SimpleTimer.h"
+SimpleTimer myTimer(1000); // 1000ms interval
 
-## Contributing
+void setup() {
+    myTimer.start();
+}
 
-Feel free to expand upon this project.
+void loop() {
+    if (myTimer.isFinished()) {
+        // Do something...
+        myTimer.reset(); // Reset for next interval
+    }
+}
+```
 
-## License
+### `StatusLED`
 
-This project is open-source. See the `LICENSE` file for more details.
+Manage a feedback LED easily.
+
+```cpp
+#include "StatusLED.h"
+StatusLED led(LED_BUILTIN);
+
+void setup() {
+    led.setMode(StatusLEDMode::HEARTBEAT); // I'm alive!
+}
+
+void loop() {
+    led.update(); // MUST call this every loop
+}
+```
+
+### `SettingsManager`
+
+Save and load settings from EEPROM.
+
+```cpp
+#include "SettingsManager.h"
+
+struct MyConfig { int val; };
+SettingsManager<MyConfig> configManager;
+
+void setup() {
+    MyConfig cfg = configManager.load();
+    cfg.val = 100;
+    configManager.save(cfg);
+}
+```
+
 "@
 }
 
 process {
-    Write-Host "Scaffolding Arduino project: $ProjectName"
+    Write-Host "Scaffolding enhanced Arduino project: $ProjectName"
 
     # Create Project Root Directory
     if (-not (Test-Path -Path $ProjectRoot)) {
@@ -386,13 +368,13 @@ process {
     Push-Location $ProjectRoot
 
     try {
-        # Create Sub-directories first to ensure they exist before files are written
+        # Create Sub-directories first
         $FoldersToCreate = @(
             $SrcDir,
-            $DPrintLibDir,
             $DocumentationDir,
             $ProjectDatasheetsDir,
-            $ImagesDir
+            $ImagesDir,
+            $LibDir
         )
         foreach ($folder in $FoldersToCreate) {
             if (-not (Test-Path -Path $folder)) {
@@ -415,31 +397,18 @@ process {
             Write-Warning "Git repository already exists in '$ProjectRoot'."
         }
 
+        # --- Create Core Files ---
+
         # Create .gitignore
         if ($PSCmdlet.ShouldProcess('.gitignore', 'Create file with content')) {
             Write-Host "Creating .gitignore"
             Set-Content -Path '.gitignore' -Value $GitignoreContent
         }
 
-        # Create DPrint.h
-        $DPrintHPath = Join-Path $DPrintLibDir 'DPrint.h'
-        if ($PSCmdlet.ShouldProcess($DPrintHPath, 'Create DPrint.h')) {
-            Write-Host "Creating DPrint.h"
-            Set-Content -Path $DPrintHPath -Value $DPrintHContent
-        }
-
-        # Create DPrint.cpp
-        $DPrintCppPath = Join-Path $DPrintLibDir 'DPrint.cpp'
-        if ($PSCmdlet.ShouldProcess($DPrintCppPath, 'Create DPrint.cpp')) {
-            Write-Host "Creating DPrint.cpp"
-            Set-Content -Path $DPrintCppPath -Value $DPrintCppContent
-        }
-
-        # Create .ino file
-        $InoFilePath = Join-Path $SrcDir "$ProjectName.ino"
-        if ($PSCmdlet.ShouldProcess($InoFilePath, 'Create .ino file')) {
-            Write-Host "Creating $ProjectName.ino"
-            Set-Content -Path $InoFilePath -Value $InoContent
+        # Create platformio.ini
+        if ($PSCmdlet.ShouldProcess('platformio.ini', 'Create file with content')) {
+            Write-Host "Creating platformio.ini"
+            Set-Content -Path 'platformio.ini' -Value $PlatformioIniContent
         }
 
         # Create README.md
@@ -449,8 +418,27 @@ process {
             Set-Content -Path $ReadmePath -Value $ReadmeContent
         }
 
-        Write-Host "`nArduino project '$ProjectName' scaffolded successfully in '$ProjectRoot'."
-        Write-Host "Run 'git add .' and 'git commit -m \"Initial Arduino project scaffold\"' to save changes."
+        # --- Create src/ Files ---
+
+        # Create .ino file
+        $InoFilePath = Join-Path $SrcDir "$ProjectName.ino"
+        if ($PSCmdlet.ShouldProcess($InoFilePath, 'Create .ino file')) {
+            Write-Host "Creating $ProjectName.ino"
+            Set-Content -Path $InoFilePath -Value $InoContent
+        }
+
+        # Create config.h
+        $ConfigHPath = Join-Path $SrcDir "config.h"
+        if ($PSCmdlet.ShouldProcess($ConfigHPath, 'Create config.h')) {
+            Write-Host "Creating config.h"
+            Set-Content -Path $ConfigHPath -Value $ConfigHContent
+        }
+
+        # --- Create lib/ Files ---
+        Copy-Item -Path $ScriptLibDir -Destination $LibDir -Recurse
+
+        Write-Host "`nEnhanced Arduino project '$ProjectName' scaffolded successfully in '$ProjectRoot'."
+        Write-Host "Run 'git add .' and 'git commit -m \"Initial project scaffold\"' to save changes."
 
     }
     catch {
