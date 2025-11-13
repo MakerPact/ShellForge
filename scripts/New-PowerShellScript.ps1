@@ -22,6 +22,22 @@ begin {
     $OriginalErrorActionPreference = $ErrorActionPreference
     $ErrorActionPreference = 'Stop'
 
+    function Wait-Path {
+        param(
+            [string]$Path,
+            [int]$MaxRetries = 50,
+            [int]$RetryIntervalMs = 100
+        )
+        $retryCount = 0
+        while (-not (Test-Path -Path $Path) -and $retryCount -lt $MaxRetries) {
+            Start-Sleep -Milliseconds $RetryIntervalMs
+            $retryCount++
+        }
+        if (-not (Test-Path -Path $Path)) {
+            throw "Failed to find path '$Path' after $MaxRetries retries."
+        }
+    }
+
     # Get the project name from the current directory name
     $ProjectName = (Get-Location).ProviderPath.Split('\')[-1]
 
@@ -113,6 +129,7 @@ process {
             if ($PSCmdlet.ShouldProcess('tests', 'Create directory')) {
                 Write-Host "Creating directory: tests"
                 New-Item -ItemType Directory -Path 'tests' | Out-Null
+                Wait-Path -Path 'tests'
             }
         }
 
@@ -139,8 +156,10 @@ process {
     }
     catch {
         Write-Error "An error occurred during project scaffolding: $_"
+        exit 1
     }
     finally {
         $ErrorActionPreference = $OriginalErrorActionPreference
     }
 }
+

@@ -2,34 +2,49 @@ param (
     [string]$ProjectName
 )
 
-# If ProjectName is not provided, use the current folder's name
-if ([string]::IsNullOrEmpty($ProjectName)) {
-    $ProjectName = (Get-Item -Path ".").Name
+$OriginalErrorActionPreference = $ErrorActionPreference
+$ErrorActionPreference = 'Stop'
+
+function Wait-Path {
+    param(
+        [string]$Path,
+        [int]$MaxRetries = 50,
+        [int]$RetryIntervalMs = 100
+    )
+    $retryCount = 0
+    while (-not (Test-Path -Path $Path) -and $retryCount -lt $MaxRetries) {
+        Start-Sleep -Milliseconds $RetryIntervalMs
+        $retryCount++
+    }
+    if (-not (Test-Path -Path $Path)) {
+        throw "Failed to find path '$Path' after $MaxRetries retries."
+    }
 }
 
-# Create the project directory
-New-Item -ItemType Directory -Name $ProjectName
-# Wait for the directory to exist
-$maxRetries = 50
-$retryCount = 0
-while (-not (Test-Path -Path $ProjectName) -and $retryCount -lt $maxRetries) {
-    Start-Sleep -Milliseconds 100
-    $retryCount++
-}
-if (-not (Test-Path -Path $ProjectName)) {
-    throw "Failed to create project directory '$ProjectName' after multiple retries."
-}
+try {
+    # If ProjectName is not provided, use the current folder's name
+    if ([string]::IsNullOrEmpty($ProjectName)) {
+        $ProjectName = (Get-Item -Path ".").Name
+    }
 
-# Change into the new directory
-cd $ProjectName
+    # Create the project directory
+    Write-Host "Creating project directory: $ProjectName..."
+    New-Item -ItemType Directory -Name $ProjectName
+    Wait-Path -Path $ProjectName
 
-# Initialize a new npm project
-npm init -y
+    # Change into the new directory
+    Set-Location -Path $ProjectName
 
-# Install Eleventy
-npm install @11ty/eleventy --save-dev
+    # Initialize a new npm project
+    Write-Host "Initializing npm project..."
+    npm init -y
 
-# Create a .eleventy.js configuration file
+    # Install Eleventy
+    Write-Host "Installing Eleventy..."
+    npm install @11ty/eleventy --save-dev
+
+    # Create a .eleventy.js configuration file
+    Write-Host "Creating .eleventy.js..."
 @'
 module.exports = function(eleventyConfig) {
   return {
@@ -41,20 +56,13 @@ module.exports = function(eleventyConfig) {
 };
 '@ | Set-Content -Path ".eleventy.js"
 
-# Create a src directory
-New-Item -ItemType Directory -Name "src"
-# Wait for the directory to exist
-$maxRetries = 50
-$retryCount = 0
-while (-not (Test-Path -Path 'src') -and $retryCount -lt $maxRetries) {
-    Start-Sleep -Milliseconds 100
-    $retryCount++
-}
-if (-not (Test-Path -Path 'src')) {
-    throw "Failed to create 'src' directory after multiple retries."
-}
+    # Create a src directory
+    Write-Host "Creating 'src' directory..."
+    New-Item -ItemType Directory -Name "src"
+    Wait-Path -Path 'src'
 
-# Create an index.md file
+    # Create an index.md file
+    Write-Host "Creating 'src/index.md'..."
 @'
 ---
 layout: layout.njk
@@ -64,20 +72,13 @@ title: My Eleventy Site
 # Hello, World!
 '@ | Set-Content -Path "src/index.md"
 
-# Create a _includes directory
-New-Item -ItemType Directory -Name "src/_includes"
-# Wait for the directory to exist
-$maxRetries = 50
-$retryCount = 0
-while (-not (Test-Path -Path 'src/_includes') -and $retryCount -lt $maxRetries) {
-    Start-Sleep -Milliseconds 100
-    $retryCount++
-}
-if (-not (Test-Path -Path 'src/_includes')) {
-    throw "Failed to create 'src/_includes' directory after multiple retries."
-}
+    # Create a _includes directory
+    Write-Host "Creating 'src/_includes' directory..."
+    New-Item -ItemType Directory -Name "src/_includes"
+    Wait-Path -Path 'src/_includes'
 
-# Create a layout.njk file
+    # Create a layout.njk file
+    Write-Host "Creating 'src/_includes/layout.njk'..."
 @'
 <!DOCTYPE html>
 <html lang="en">
@@ -92,13 +93,24 @@ if (-not (Test-Path -Path 'src/_includes')) {
 </html>
 '@ | Set-Content -Path "src/_includes/layout.njk"
 
-# Initialize a new Git repository
-git init
+    # Initialize a new Git repository
+    Write-Host "Initializing Git repository..."
+    git init
 
-# Create a .gitignore file
+    # Create a .gitignore file
+    Write-Host "Creating .gitignore..."
 @'
 /node_modules
 /dist
 '@ | Set-Content -Path ".gitignore"
 
-Write-Host "Successfully created a new Eleventy site: $ProjectName"
+    Write-Host "Successfully created a new Eleventy site: $ProjectName"
+}
+catch {
+    Write-Error "An error occurred during project scaffolding: $_"
+    exit 1
+}
+finally {
+    $ErrorActionPreference = $OriginalErrorActionPreference
+}
+

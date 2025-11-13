@@ -30,6 +30,22 @@ begin {
     $OriginalErrorActionPreference = $ErrorActionPreference
     $ErrorActionPreference = 'Stop'
 
+    function Wait-Path {
+        param(
+            [string]$Path,
+            [int]$MaxRetries = 50,
+            [int]$RetryIntervalMs = 100
+        )
+        $retryCount = 0
+        while (-not (Test-Path -Path $Path) -and $retryCount -lt $MaxRetries) {
+            Start-Sleep -Milliseconds $RetryIntervalMs
+            $retryCount++
+        }
+        if (-not (Test-Path -Path $Path)) {
+            throw "Failed to find path '$Path' after $MaxRetries retries."
+        }
+    }
+
     # Define paths
     $ProjectRoot = Join-Path (Get-Location).ProviderPath $ProjectName
     $SrcDir = Join-Path $ProjectRoot 'src'
@@ -359,6 +375,7 @@ process {
         if ($PSCmdlet.ShouldProcess($ProjectRoot, 'Create project root directory')) {
             Write-Host "Creating project root: $ProjectRoot"
             New-Item -ItemType Directory -Path $ProjectRoot | Out-Null
+            Wait-Path -Path $ProjectRoot
         }
     } else {
         Write-Warning "Project directory '$ProjectRoot' already exists. Skipping creation."
@@ -382,7 +399,7 @@ process {
                 if ($PSCmdlet.ShouldProcess($folder, 'Create directory')) {
                     Write-Host "Creating directory: $folder"
                     New-Item -ItemType Directory -Path $folder | Out-Null
-                    Start-Sleep -Milliseconds 100 # Add a small delay after creating each directory
+                    Wait-Path -Path $folder
                 }
             }
         }
@@ -437,7 +454,8 @@ process {
 
     }
     catch {
-        Write-Error "An error occurred during project scaffolding: $_ "
+        Write-Error "An error occurred during project scaffolding: $_"
+        exit 1
     }
     finally {
         # Restore original ErrorActionPreference

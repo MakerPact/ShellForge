@@ -19,6 +19,22 @@ param()
 begin {
     $OriginalErrorActionPreference = $ErrorActionPreference
     $ErrorActionPreference = 'Stop'
+
+    function Wait-Path {
+        param(
+            [string]$Path,
+            [int]$MaxRetries = 50,
+            [int]$RetryIntervalMs = 100
+        )
+        $retryCount = 0
+        while (-not (Test-Path -Path $Path) -and $retryCount -lt $MaxRetries) {
+            Start-Sleep -Milliseconds $RetryIntervalMs
+            $retryCount++
+        }
+        if (-not (Test-Path -Path $Path)) {
+            throw "Failed to find path '$Path' after $MaxRetries retries."
+        }
+    }
 }
 
 process {
@@ -44,16 +60,7 @@ process {
                 Write-Host "Running 'npm install'..."
                 Write-Host "This is the longest step and can take several minutes depending on your network connection."
                 npm install
-                # Wait for the node_modules directory to exist
-                $maxRetries = 50
-                $retryCount = 0
-                while (-not (Test-Path -Path 'node_modules') -and $retryCount -lt $maxRetries) {
-                    Start-Sleep -Milliseconds 100
-                    $retryCount++
-                }
-                if (-not (Test-Path -Path 'node_modules')) {
-                    throw "Failed to create 'node_modules' directory after multiple retries."
-                }
+                Wait-Path -Path 'node_modules'
             }
         } else {
             Write-Warning "'package.json' not found. Skipping 'npm install'."
@@ -78,8 +85,10 @@ process {
     }
     catch {
         Write-Error "An error occurred during project scaffolding: $_"
+        exit 1
     }
     finally {
         $ErrorActionPreference = $OriginalErrorActionPreference
     }
 }
+

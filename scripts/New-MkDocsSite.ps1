@@ -2,54 +2,58 @@ param (
     [string]$ProjectName
 )
 
-# If ProjectName is not provided, use the current folder's name
-if ([string]::IsNullOrEmpty($ProjectName)) {
-    $ProjectName = (Get-Item -Path ".").Name
+$OriginalErrorActionPreference = $ErrorActionPreference
+$ErrorActionPreference = 'Stop'
+
+function Wait-Path {
+    param(
+        [string]$Path,
+        [int]$MaxRetries = 50,
+        [int]$RetryIntervalMs = 100
+    )
+    $retryCount = 0
+    while (-not (Test-Path -Path $Path) -and $retryCount -lt $MaxRetries) {
+        Start-Sleep -Milliseconds $RetryIntervalMs
+        $retryCount++
+    }
+    if (-not (Test-Path -Path $Path)) {
+        throw "Failed to find path '$Path' after $MaxRetries retries."
+    }
 }
 
-# Create the project directory
-New-Item -ItemType Directory -Name $ProjectName
+try {
+    # If ProjectName is not provided, use the current folder's name
+    if ([string]::IsNullOrEmpty($ProjectName)) {
+        $ProjectName = (Get-Item -Path ".").Name
+    }
 
-# Wait for the directory to exist
-$maxRetries = 50
-$retryCount = 0
-while (-not (Test-Path -Path $ProjectName) -and $retryCount -lt $maxRetries) {
-    Start-Sleep -Milliseconds 100
-    $retryCount++
-}
-if (-not (Test-Path -Path $ProjectName)) {
-    throw "Failed to create project directory '$ProjectName' after multiple retries."
-}
+    # Create the project directory
+    Write-Host "Creating project directory: $ProjectName..."
+    New-Item -ItemType Directory -Name $ProjectName
+    Wait-Path -Path $ProjectName
 
-# Change into the new directory
-cd $ProjectName
+    # Change into the new directory
+    Set-Location -Path $ProjectName
 
-# Initialize a new Git repository
-git init
+    # Initialize a new Git repository
+    Write-Host "Initializing Git repository..."
+    git init
 
-# Create a Python virtual environment
-python -m venv .venv
+    # Create a Python virtual environment
+    Write-Host "Creating Python virtual environment..."
+    python -m venv .venv
+    Wait-Path -Path '.venv'
 
-# Wait for the directory to exist
-$maxRetries = 50
-$retryCount = 0
-while (-not (Test-Path -Path '.venv') -and $retryCount -lt $maxRetries) {
-    Start-Sleep -Milliseconds 100
-    $retryCount++
-}
-if (-not (Test-Path -Path '.venv')) {
-    throw "Failed to create '.venv' directory after multiple retries."
-}
+    # Install MkDocs
+    Write-Host "Installing MkDocs..."
+    .\.venv\Scripts\pip install mkdocs
 
-# Install MkDocs
-Write-Host "Installing MkDocs..."
-.\.venv\Scripts\pip install mkdocs
+    # Create MkDocs project
+    Write-Host "Creating MkDocs project..."
+    .\.venv\Scripts\mkdocs new .
 
-# Create MkDocs project
-Write-Host "Creating MkDocs project..."
-.\.venv\Scripts\mkdocs new .
-
-# Create a .gitignore file
+    # Create a .gitignore file
+    Write-Host "Creating .gitignore..."
 @'
 # Python
 __pycache__/
@@ -124,5 +128,14 @@ env.bak
 .DS_Store
 '@ | Set-Content -Path ".gitignore"
 
-Write-Host "Successfully created a new MkDocs site: $ProjectName"
-Write-Host "Run '.\.venv\Scripts\mkdocs serve' to start the development server."
+    Write-Host "Successfully created a new MkDocs site: $ProjectName"
+    Write-Host "Run '.\.venv\Scripts\mkdocs serve' to start the development server."
+}
+catch {
+    Write-Error "An error occurred during project scaffolding: $_"
+    exit 1
+}
+finally {
+    $ErrorActionPreference = $OriginalErrorActionPreference
+}
+

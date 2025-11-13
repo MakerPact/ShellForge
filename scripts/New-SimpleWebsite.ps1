@@ -22,6 +22,22 @@ begin {
     $OriginalErrorActionPreference = $ErrorActionPreference
     $ErrorActionPreference = 'Stop'
 
+    function Wait-Path {
+        param(
+            [string]$Path,
+            [int]$MaxRetries = 50,
+            [int]$RetryIntervalMs = 100
+        )
+        $retryCount = 0
+        while (-not (Test-Path -Path $Path) -and $retryCount -lt $MaxRetries) {
+            Start-Sleep -Milliseconds $RetryIntervalMs
+            $retryCount++
+        }
+        if (-not (Test-Path -Path $Path)) {
+            throw "Failed to find path '$Path' after $MaxRetries retries."
+        }
+    }
+
     # Define file and folder structures
     $ProjectName = (Get-Location).ProviderPath.Split('\')[-1]
     $FilesToCreate = @(
@@ -93,16 +109,7 @@ process {
                 if ($PSCmdlet.ShouldProcess($folder, 'Create directory')) {
                     Write-Host "Creating directory: $folder"
                     New-Item -ItemType Directory -Path $folder | Out-Null
-                    # Wait for the directory to exist
-                    $maxRetries = 50
-                    $retryCount = 0
-                    while (-not (Test-Path -Path $folder) -and $retryCount -lt $maxRetries) {
-                        Start-Sleep -Milliseconds 100
-                        $retryCount++
-                    }
-                    if (-not (Test-Path -Path $folder)) {
-                        throw "Failed to create directory '$folder' after multiple retries."
-                    }
+                    Wait-Path -Path $folder
                 }
             }
         }
@@ -134,10 +141,12 @@ process {
 
     }
     catch {
-        Write-Error "An error occurred during project scaffolding: $_ "
+        Write-Error "An error occurred during project scaffolding: $_"
+        exit 1
     }
     finally {
         # Restore original ErrorActionPreference
         $ErrorActionPreference = $OriginalErrorActionPreference
     }
 }
+

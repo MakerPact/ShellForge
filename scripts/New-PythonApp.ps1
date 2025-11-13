@@ -22,6 +22,22 @@ begin {
     $OriginalErrorActionPreference = $ErrorActionPreference
     $ErrorActionPreference = 'Stop'
 
+    function Wait-Path {
+        param(
+            [string]$Path,
+            [int]$MaxRetries = 50,
+            [int]$RetryIntervalMs = 100
+        )
+        $retryCount = 0
+        while (-not (Test-Path -Path $Path) -and $retryCount -lt $MaxRetries) {
+            Start-Sleep -Milliseconds $RetryIntervalMs
+            $retryCount++
+        }
+        if (-not (Test-Path -Path $Path)) {
+            throw "Failed to find path '$Path' after $MaxRetries retries."
+        }
+    }
+
     $ProjectName = (Get-Location).ProviderPath.Split('\')[-1]
 
     $GitignoreContent = @'
@@ -122,16 +138,7 @@ process {
             if ($PSCmdlet.ShouldProcess('.venv', 'Create Python virtual environment')) {
                 Write-Host "Creating Python virtual environment in '.venv'..."
                 python -m venv .venv
-                # Wait for the directory to exist
-                $maxRetries = 50
-                $retryCount = 0
-                while (-not (Test-Path -Path '.venv') -and $retryCount -lt $maxRetries) {
-                    Start-Sleep -Milliseconds 100
-                    $retryCount++
-                }
-                if (-not (Test-Path -Path '.venv')) {
-                    throw "Failed to create '.venv' directory after multiple retries."
-                }
+                Wait-Path -Path '.venv'
             }
         }
         else {
@@ -165,9 +172,11 @@ process {
 
     }
     catch {
-        Write-Error "An error occurred during project scaffolding: $_ "
+        Write-Error "An error occurred during project scaffolding: $_"
+        exit 1
     }
     finally {
         $ErrorActionPreference = $OriginalErrorActionPreference
     }
 }
+

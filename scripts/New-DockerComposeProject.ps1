@@ -2,32 +2,45 @@ param (
     [string]$ProjectName
 )
 
-# If ProjectName is not provided, use the current folder's name
-if ([string]::IsNullOrEmpty($ProjectName)) {
-    $ProjectName = (Get-Item -Path ".").Name
+$OriginalErrorActionPreference = $ErrorActionPreference
+$ErrorActionPreference = 'Stop'
+
+function Wait-Path {
+    param(
+        [string]$Path,
+        [int]$MaxRetries = 50,
+        [int]$RetryIntervalMs = 100
+    )
+    $retryCount = 0
+    while (-not (Test-Path -Path $Path) -and $retryCount -lt $MaxRetries) {
+        Start-Sleep -Milliseconds $RetryIntervalMs
+        $retryCount++
+    }
+    if (-not (Test-Path -Path $Path)) {
+        throw "Failed to find path '$Path' after $MaxRetries retries."
+    }
 }
 
-# Create the project directory
-New-Item -ItemType Directory -Name $ProjectName
+try {
+    # If ProjectName is not provided, use the current folder's name
+    if ([string]::IsNullOrEmpty($ProjectName)) {
+        $ProjectName = (Get-Item -Path ".").Name
+    }
 
-# Wait for the directory to exist
-$maxRetries = 50
-$retryCount = 0
-while (-not (Test-Path -Path $ProjectName) -and $retryCount -lt $maxRetries) {
-    Start-Sleep -Milliseconds 100
-    $retryCount++
-}
-if (-not (Test-Path -Path $ProjectName)) {
-    throw "Failed to create project directory '$ProjectName' after multiple retries."
-}
+    # Create the project directory
+    Write-Host "Creating project directory: $ProjectName..."
+    New-Item -ItemType Directory -Name $ProjectName
+    Wait-Path -Path $ProjectName
 
-# Change into the new directory
-cd $ProjectName
+    # Change into the new directory
+    Set-Location -Path $ProjectName
 
-# Initialize a new Git repository
-git init
+    # Initialize a new Git repository
+    Write-Host "Initializing Git repository..."
+    git init
 
-# Create docker-compose.yml
+    # Create docker-compose.yml
+    Write-Host "Creating docker-compose.yml..."
 @'
 version: '3.8'
 
@@ -59,34 +72,20 @@ volumes:
   db_data:
 '@ | Set-Content -Path "docker-compose.yml"
 
-# Create example app directory and index.php
-New-Item -ItemType Directory -Name "app"
-# Wait for the directory to exist
-$maxRetries = 50
-$retryCount = 0
-while (-not (Test-Path -Path 'app') -and $retryCount -lt $maxRetries) {
-    Start-Sleep -Milliseconds 100
-    $retryCount++
-}
-if (-not (Test-Path -Path 'app')) {
-    throw "Failed to create 'app' directory after multiple retries."
-}
+    # Create example app directory and index.php
+    Write-Host "Creating 'app' directory..."
+    New-Item -ItemType Directory -Name "app"
+    Wait-Path -Path 'app'
+    Write-Host "Creating 'app/index.php'..."
 @'
 <?php echo "Hello from Docker Compose!"; ?>
 '@ | Set-Content -Path "app/index.php"
 
-# Create example nginx directory and default.conf
-New-Item -ItemType Directory -Name "nginx"
-# Wait for the directory to exist
-$maxRetries = 50
-$retryCount = 0
-while (-not (Test-Path -Path 'nginx') -and $retryCount -lt $maxRetries) {
-    Start-Sleep -Milliseconds 100
-    $retryCount++
-}
-if (-not (Test-Path -Path 'nginx')) {
-    throw "Failed to create 'nginx' directory after multiple retries."
-}
+    # Create example nginx directory and default.conf
+    Write-Host "Creating 'nginx' directory..."
+    New-Item -ItemType Directory -Name "nginx"
+    Wait-Path -Path 'nginx'
+    Write-Host "Creating 'nginx/default.conf'..."
 @'
 server {
     listen 80;
@@ -112,7 +111,8 @@ server {
 }
 '@ | Set-Content -Path "nginx/default.conf"
 
-# Create a .gitignore file
+    # Create a .gitignore file
+    Write-Host "Creating .gitignore..."
 @'
 .env
 .env.*
@@ -120,5 +120,14 @@ docker-compose.override.yml
 *.log
 '@ | Set-Content -Path ".gitignore"
 
-Write-Host "Successfully created a new Docker Compose project: $ProjectName"
-Write-Host "Run 'docker-compose up -d' to start the services."
+    Write-Host "Successfully created a new Docker Compose project: $ProjectName"
+    Write-Host "Run 'docker-compose up -d' to start the services."
+}
+catch {
+    Write-Error "An error occurred during project scaffolding: $_"
+    exit 1
+}
+finally {
+    $ErrorActionPreference = $OriginalErrorActionPreference
+}
+

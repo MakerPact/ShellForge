@@ -2,28 +2,41 @@ param (
     [string]$ProjectName
 )
 
-# If ProjectName is not provided, use the current folder's name
-if ([string]::IsNullOrEmpty($ProjectName)) {
-    $ProjectName = (Get-Item -Path ".").Name
+$OriginalErrorActionPreference = $ErrorActionPreference
+$ErrorActionPreference = 'Stop'
+
+function Wait-Path {
+    param(
+        [string]$Path,
+        [int]$MaxRetries = 50,
+        [int]$RetryIntervalMs = 100
+    )
+    $retryCount = 0
+    while (-not (Test-Path -Path $Path) -and $retryCount -lt $MaxRetries) {
+        Start-Sleep -Milliseconds $RetryIntervalMs
+        $retryCount++
+    }
+    if (-not (Test-Path -Path $Path)) {
+        throw "Failed to find path '$Path' after $MaxRetries retries."
+    }
 }
 
-# Create the project directory
-New-Item -ItemType Directory -Name $ProjectName
-# Wait for the directory to exist
-$maxRetries = 50
-$retryCount = 0
-while (-not (Test-Path -Path $ProjectName) -and $retryCount -lt $maxRetries) {
-    Start-Sleep -Milliseconds 100
-    $retryCount++
-}
-if (-not (Test-Path -Path $ProjectName)) {
-    throw "Failed to create project directory '$ProjectName' after multiple retries."
-}
+try {
+    # If ProjectName is not provided, use the current folder's name
+    if ([string]::IsNullOrEmpty($ProjectName)) {
+        $ProjectName = (Get-Item -Path ".").Name
+    }
 
-# Change into the new directory
-cd $ProjectName
+    # Create the project directory
+    Write-Host "Creating project directory: $ProjectName..."
+    New-Item -ItemType Directory -Name $ProjectName
+    Wait-Path -Path $ProjectName
 
-# Create a main.go file
+    # Change into the new directory
+    Set-Location -Path $ProjectName
+
+    # Create a main.go file
+    Write-Host "Creating main.go..."
 @'
 package main
 
@@ -34,13 +47,16 @@ func main() {
 }
 '@ | Set-Content -Path "main.go"
 
-# Initialize a new Go module
-go mod init $ProjectName
+    # Initialize a new Go module
+    Write-Host "Initializing Go module..."
+    go mod init $ProjectName
 
-# Initialize a new Git repository
-git init
+    # Initialize a new Git repository
+    Write-Host "Initializing Git repository..."
+    git init
 
-# Create a .gitignore file
+    # Create a .gitignore file
+    Write-Host "Creating .gitignore..."
 @'
 # Binaries for programs and plugins
 *.exe
@@ -59,4 +75,13 @@ git init
 # vendor/
 '@ | Set-Content -Path ".gitignore"
 
-Write-Host "Successfully created a new Go project: $ProjectName"
+    Write-Host "Successfully created a new Go project: $ProjectName"
+}
+catch {
+    Write-Error "An error occurred during project scaffolding: $_"
+    exit 1
+}
+finally {
+    $ErrorActionPreference = $OriginalErrorActionPreference
+}
+

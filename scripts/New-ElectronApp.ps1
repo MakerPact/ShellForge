@@ -2,35 +2,49 @@ param (
     [string]$ProjectName
 )
 
-# If ProjectName is not provided, use the current folder's name
-if ([string]::IsNullOrEmpty($ProjectName)) {
-    $ProjectName = (Get-Item -Path ".").Name
+$OriginalErrorActionPreference = $ErrorActionPreference
+$ErrorActionPreference = 'Stop'
+
+function Wait-Path {
+    param(
+        [string]$Path,
+        [int]$MaxRetries = 50,
+        [int]$RetryIntervalMs = 100
+    )
+    $retryCount = 0
+    while (-not (Test-Path -Path $Path) -and $retryCount -lt $MaxRetries) {
+        Start-Sleep -Milliseconds $RetryIntervalMs
+        $retryCount++
+    }
+    if (-not (Test-Path -Path $Path)) {
+        throw "Failed to find path '$Path' after $MaxRetries retries."
+    }
 }
 
-# Create the project directory
-New-Item -ItemType Directory -Name $ProjectName
+try {
+    # If ProjectName is not provided, use the current folder's name
+    if ([string]::IsNullOrEmpty($ProjectName)) {
+        $ProjectName = (Get-Item -Path ".").Name
+    }
 
-# Wait for the directory to exist
-$maxRetries = 50
-$retryCount = 0
-while (-not (Test-Path -Path $ProjectName) -and $retryCount -lt $maxRetries) {
-    Start-Sleep -Milliseconds 100
-    $retryCount++
-}
-if (-not (Test-Path -Path $ProjectName)) {
-    throw "Failed to create project directory '$ProjectName' after multiple retries."
-}
+    # Create the project directory
+    Write-Host "Creating project directory: $ProjectName..."
+    New-Item -ItemType Directory -Name $ProjectName
+    Wait-Path -Path $ProjectName
 
-# Change into the new directory
-cd $ProjectName
+    # Change into the new directory
+    Set-Location -Path $ProjectName
 
-# Initialize a new npm project
-npm init -y
+    # Initialize a new npm project
+    Write-Host "Initializing npm project..."
+    npm init -y
 
-# Install Electron
-npm install electron --save-dev
+    # Install Electron
+    Write-Host "Installing Electron..."
+    npm install electron --save-dev
 
-# Create main.js
+    # Create main.js
+    Write-Host "Creating main.js..."
 @'
 const { app, BrowserWindow } = require('electron')
 
@@ -61,7 +75,8 @@ app.on('activate', () => {
 })
 '@ | Set-Content -Path "main.js"
 
-# Create index.html
+    # Create index.html
+    Write-Host "Creating index.html..."
 @'
 <!DOCTYPE html>
 <html>
@@ -78,15 +93,18 @@ app.on('activate', () => {
 </html>
 '@ | Set-Content -Path "index.html"
 
-# Update package.json with start script
-(Get-Content package.json | ConvertFrom-Json).scripts.start = "electron ."
-(Get-Content package.json | ConvertFrom-Json).main = "main.js"
-(Get-Content package.json) | Set-Content package.json
+    # Update package.json with start script
+    Write-Host "Updating package.json..."
+    (Get-Content package.json | ConvertFrom-Json).scripts.start = "electron ."
+    (Get-Content package.json | ConvertFrom-Json).main = "main.js"
+    (Get-Content package.json) | Set-Content package.json
 
-# Initialize a new Git repository
-git init
+    # Initialize a new Git repository
+    Write-Host "Initializing Git repository..."
+    git init
 
-# Create a .gitignore file
+    # Create a .gitignore file
+    Write-Host "Creating .gitignore..."
 @'
 /node_modules
 /dist
@@ -96,5 +114,14 @@ git init
 *.log
 '@ | Set-Content -Path ".gitignore"
 
-Write-Host "Successfully created a new Electron App: $ProjectName"
-Write-Host "Run 'npm start' to run the application."
+    Write-Host "Successfully created a new Electron App: $ProjectName"
+    Write-Host "Run 'npm start' to run the application."
+}
+catch {
+    Write-Error "An error occurred during project scaffolding: $_"
+    exit 1
+}
+finally {
+    $ErrorActionPreference = $OriginalErrorActionPreference
+}
+
