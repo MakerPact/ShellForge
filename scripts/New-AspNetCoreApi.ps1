@@ -22,6 +22,11 @@ function Wait-Path {
 }
 
 try {
+    # Check if dotnet is installed
+    if (-not (Get-Command dotnet -ErrorAction SilentlyContinue)) {
+        throw ".NET SDK is not installed. Please install it from https://aka.ms/dotnet-download"
+    }
+
     # If ProjectName is not provided, use the current folder's name
     if ([string]::IsNullOrEmpty($ProjectName)) {
         $ProjectName = (Get-Item -Path ".").Name
@@ -47,6 +52,8 @@ try {
 }
 catch {
     Write-Error "An error occurred during project scaffolding: $_"
+    Write-Host "Press Enter to exit..."
+    Read-Host
     exit 1
 }
 finally {

@@ -47,6 +47,8 @@ try {
 }
 catch {
     Write-Error "An error occurred during project scaffolding: $_"
+    Write-Host "Press Enter to exit..."
+    Read-Host
     exit 1
 }
 finally {
