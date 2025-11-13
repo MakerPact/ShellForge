@@ -1,0 +1,31 @@
+# PowerShell module files
+*.psd1
+*.psm1
+
+# User-specific files
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Build artifacts
+/bin
+/obj
+/packages
+/dist
+/build
+
+# Pester
+/Pester
+/Pester*.zip
+/Pester*.nupkg
+/Pester*.tar.gz
+/Pester*.tar.bz2
+
+# PSDeploy
+.psdeploy.ps1
+.psdeploy.psm1
+.psdeploy.psd1
+psdeploy.ps1
+psdeploy.psm1
+psdeploy.psd1
