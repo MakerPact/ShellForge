@@ -1,0 +1,54 @@
+# Arduino IDE and build artifacts
+*.hex
+*.elf
+*.bin
+*.lst
+*.map
+*.eep
+*.s
+*.o
+*.d
+*.sym
+*.suo
+*.user
+*.vcproj.filters
+*.filters
+*.aps
+*.bak
+*.ncb
+*.opensdf
+*.sdf
+*.ipch
+*.obj
+*.pch
+*.pdb
+*.idb
+*.res
+*.tlog
+*.vspscc
+*.vssscc
+*.buildlog
+*.log
+*.plg
+*.lastbuildstate
+*.opendb
+*.rcproj
+*.sln
+*.vcxproj
+*.vcxproj.user
+*.code-workspace
+*.vscode/
+
+# Libraries
+/libraries/*
+!/libraries/DPrint/ # Keep our custom library
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Project specific
+.vscode/
+.build/
+.pio/
+.idea/

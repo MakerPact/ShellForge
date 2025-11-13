@@ -23,6 +23,22 @@ begin {
     $OriginalErrorActionPreference = $ErrorActionPreference
     $ErrorActionPreference = 'Stop'
 
+    function Wait-Path {
+        param(
+            [string]$Path,
+            [int]$MaxRetries = 50,
+            [int]$RetryIntervalMs = 100
+        )
+        $retryCount = 0
+        while (-not (Test-Path -Path $Path) -and $retryCount -lt $MaxRetries) {
+            Start-Sleep -Milliseconds $RetryIntervalMs
+            $retryCount++
+        }
+        if (-not (Test-Path -Path $Path)) {
+            throw "Failed to find path '$Path' after $MaxRetries retries."
+        }
+    }
+
     $GitignoreContent = @'
 # Logs
 logs
@@ -188,16 +204,7 @@ process {
             if ($PSCmdlet.ShouldProcess('src', 'Create directory')) {
                 Write-Host "Creating directory: src"
                 New-Item -ItemType Directory -Path 'src' | Out-Null
-                # Wait for the directory to exist
-                $maxRetries = 50
-                $retryCount = 0
-                while (-not (Test-Path -Path 'src') -and $retryCount -lt $maxRetries) {
-                    Start-Sleep -Milliseconds 100
-                    $retryCount++
-                }
-                if (-not (Test-Path -Path 'src')) {
-                    throw "Failed to create 'src' directory after multiple retries."
-                }
+                Wait-Path -Path 'src'
             }
         }
 
@@ -229,8 +236,10 @@ process {
     }
     catch {
         Write-Error "An error occurred during project scaffolding: $_"
+        exit 1
     }
     finally {
         $ErrorActionPreference = $OriginalErrorActionPreference
     }
 }
+

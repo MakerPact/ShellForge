@@ -1,0 +1,4 @@
+# Kubernetes generated files
+*.bak
+*.tmp
+.kube/
